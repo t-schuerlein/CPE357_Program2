@@ -12,6 +12,8 @@ typedef unsigned char Byte;
 //TODO idk the size this is supposed to be
 int HEAPSIZE = 1048576;
 
+
+
 typedef struct chunkhead
 {
     int size;
@@ -19,6 +21,8 @@ typedef struct chunkhead
     unsigned int info = 0;
     //FIXME changed pointers to chunkheads (used to be unsigned char)
     unsigned char *next, *prev = NULL;
+
+
 } chunkhead;
 
 void *startofheap = NULL;
@@ -38,7 +42,7 @@ void analyze()
     printf("\n--------------------------------------------------------------\n");
     if (!startofheap)
     {
-        printf("no heap\n");
+        printf("no heap, program break on address: %p\n", sbrk(0));
         return;
     }
     chunkhead *ch = (chunkhead *)startofheap;
@@ -60,26 +64,26 @@ void myfree(unsigned char *address);
 int main()
 {
 
-Byte*a[100];
-analyze();//50% points
-for(int i=0;i<100;i++)
-a[i]= mymalloc(1000);
-for(int i=0;i<90;i++)
-myfree(a[i]);
-analyze(); //50% of points if this is correct
-myfree(a[95]);
- a[95] = mymalloc(1000);
-analyze();//25% points, this new chunk should fill the smaller free one
-//(best fit)
-for(int i=90;i<100;i++)
-myfree(a[i]);
-analyze();// 25% should be an empty heap now with the start address
-//from the program start
+    Byte *a[100];
+    analyze(); //50% points
+    for (int i = 0; i < 100; i++)
+        a[i] = mymalloc(1000);
+    for (int i = 0; i < 90; i++)
+        myfree(a[i]);
+    analyze(); //50% of points if this is correct
+    myfree(a[95]);
+    a[95] = mymalloc(1000);
+    analyze(); //25% points, this new chunk should fill the smaller free one
+    //(best fit)
+    for (int i = 90; i < 100; i++)
+        myfree(a[i]);
+    analyze(); // 25% should be an empty heap now with the start address
+               //from the program start
+ 
 
     return 0;
 }
 
-// fix return pointer value
 unsigned char *mymalloc(int size)
 {
 
@@ -124,7 +128,7 @@ unsigned char *mymalloc(int size)
         // location of next chunk head
         if (remaining_mem > 0)
         {
-            printf("THERE WAS SPACE FOR ANOTHER NODE\n");
+            // printf("THERE WAS SPACE FOR ANOTHER NODE\n");
             Byte *loc = (Byte *)best + alloc_size;
             chunkhead *nextHead = (chunkhead *)loc;
             // chunkhead *nextHead = (chunkhead *)((unsigned char *)p + sizeof(chunkhead) + p->size);
@@ -139,7 +143,8 @@ unsigned char *mymalloc(int size)
     else
     {
 
-        if(HEAPSIZE < size){
+        if (HEAPSIZE < (size + sizeof(chunkhead)))
+        {
             return NULL;
         }
 
@@ -225,19 +230,21 @@ void myfree(unsigned char *address)
         {
             // sbrk(-(iter->size + sizeof(chunkhead)));
             chunkhead *newLast = (chunkhead *)iter->prev;
-            printf("hello\n");
+            int moveBack = iter->size;
+
             if (newLast)
             {
-                printf("not the last value");
+                // printf("not the last value");
                 newLast->next = NULL;
             }
             else
             {
                 // set back program break
-                printf("trying to remove last value\n");
+                // printf("trying to remove last value\n");
                 startofheap = NULL;
             }
-            sbrk(-PAGESIZE);
+            sbrk(-moveBack);
+            HEAPSIZE += moveBack;
             return;
         }
     }
